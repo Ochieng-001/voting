@@ -23,7 +23,7 @@ interface WalletProviderProps {
 }
 
 // Use environment variable for contract address, fallback to a default for development
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x742d35Cc6631C0532925a3b8D3Ac6Bb23b4dFc21";
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "YOUR_CONTRACT_ADDRESS_HERE";
 
 export function WalletProvider({ children }: WalletProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
