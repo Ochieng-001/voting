@@ -5,6 +5,7 @@ import { WalletConnection, WalletBanner } from "@/components/WalletConnection";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { useElectionStats, useIsOwner } from "@/hooks/use-contract";
 import { useElectionSettings } from "@/hooks/use-election-settings";
+import { CountdownTimer } from "@/components/CountdownTimer";
 import { useWallet } from "@/hooks/use-wallet";
 import { Link } from "wouter";
 import {
@@ -156,6 +157,28 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Countdown Timers */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <CountdownTimer
+                targetDate={electionSettings.registrationDeadline}
+                title="Registration Closes"
+                description="Time until registration deadline"
+                variant="registration"
+              />
+              <CountdownTimer
+                targetDate={electionSettings.votingStartTime}
+                title="Voting Begins"
+                description="Time until voting opens"
+                variant="voting"
+              />
+              <CountdownTimer
+                targetDate={electionSettings.votingEndTime}
+                title="Voting Ends"
+                description="Time until voting closes"
+                variant="voting"
+              />
             </div>
 
             {/* Election Stats */}
