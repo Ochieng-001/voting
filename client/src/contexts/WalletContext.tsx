@@ -1,7 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { web3Service } from '@/lib/web3';
-import { VoterRegistryContract } from '@/lib/contract';
-import { ethers } from 'ethers';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { web3Service } from "@/lib/web3";
+import { VoterRegistryContract } from "@/lib/contract";
+import { ethers } from "ethers";
 
 interface WalletContextType {
   isConnected: boolean;
@@ -23,7 +29,9 @@ interface WalletProviderProps {
 }
 
 // Use environment variable for contract address, fallback to a default for development
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "YOUR_CONTRACT_ADDRESS_HERE";
+const CONTRACT_ADDRESS =
+  import.meta.env.VITE_CONTRACT_ADDRESS ||
+  "0x79D3d4e2c2a1313A16FE4dB9D35540338E1eE5E3";
 
 export function WalletProvider({ children }: WalletProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
@@ -31,33 +39,43 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
   const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
   const [contract, setContract] = useState<VoterRegistryContract | null>(null);
-  const [networkName, setNetworkName] = useState('');
+  const [networkName, setNetworkName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const connectWallet = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const { provider: newProvider, signer: newSigner, address: newAddress } = await web3Service.connectWallet();
-      
+      const {
+        provider: newProvider,
+        signer: newSigner,
+        address: newAddress,
+      } = await web3Service.connectWallet();
+
       setProvider(newProvider);
       setSigner(newSigner);
       setAddress(newAddress);
       setIsConnected(true);
-      
+
       // Create contract instance
-      const contractInstance = new VoterRegistryContract(CONTRACT_ADDRESS, newSigner);
+      const contractInstance = new VoterRegistryContract(
+        CONTRACT_ADDRESS,
+        newSigner
+      );
       setContract(contractInstance);
-      
+
       // Get network info
       const network = await newProvider.getNetwork();
-      setNetworkName(network.name === 'unknown' ? `Chain ID: ${network.chainId}` : network.name);
-      
+      setNetworkName(
+        network.name === "unknown"
+          ? `Chain ID: ${network.chainId}`
+          : network.name
+      );
     } catch (err: any) {
       setError(err.message);
-      console.error('Wallet connection error:', err);
+      console.error("Wallet connection error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +87,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
     setProvider(null);
     setSigner(null);
     setContract(null);
-    setNetworkName('');
+    setNetworkName("");
     setError(null);
     web3Service.removeListeners();
   };
@@ -111,16 +129,14 @@ export function WalletProvider({ children }: WalletProviderProps) {
   };
 
   return (
-    <WalletContext.Provider value={value}>
-      {children}
-    </WalletContext.Provider>
+    <WalletContext.Provider value={value}>{children}</WalletContext.Provider>
   );
 }
 
 export function useWallet(): WalletContextType {
   const context = useContext(WalletContext);
   if (context === undefined) {
-    throw new Error('useWallet must be used within a WalletProvider');
+    throw new Error("useWallet must be used within a WalletProvider");
   }
   return context;
 }

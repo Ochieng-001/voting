@@ -1,0 +1,116 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Voting {
+    address public owner;
+    
+    struct Voter {
+        uint id;
+        string name;
+        address voterAddress;
+        bool isRegistered;
+        bool hasVoted;
+    }
+
+    struct Vote {
+        uint candidateId;
+        uint voterId;
+        bool isVoted;
+    }
+
+    // Define Candidate as a struct
+    struct Candidate {
+        uint id;
+        string name;
+        string party;
+        string photo;
+    }
+
+    // Mapping to store voters by their address
+    mapping(address => Voter) public voters;
+    // Mapping to store votes by voter address
+    mapping(address => Vote) public votes;
+    // Mapping to store vote counts for each candidate
+    mapping(uint => uint) public voteCounts;
+    // Array to store all registered voters
+    Voter[] public registeredVoters;
+    // Array to store all cast votes
+    Vote[] public castVotes;
+    // Array to store candidates
+    Candidate[] public candidates;
+
+    // Event to emit when a candidate is added
+    event CandidateAdded(uint id, string name, string party, string photo);
+    // Event to emit when a voter is registered
+    event VoterRegistered(address indexed voterAddress, uint id, string name);
+    // Event to emit when a vote is cast
+    event VoteCast(address indexed voterAddress, uint candidateId);
+
+    // Modifier to restrict access to owner only
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the contract owner can perform this action");
+        _;
+    }
+
+    // Constructor to set the contract owner
+    constructor() {
+        owner = msg.sender;
+    }
+
+    // Function to add candidates (Owner only)
+    function addCandidate(uint _id, string memory _name, string memory _party, string memory _photo) public onlyOwner {
+        Candidate memory newCandidate = Candidate(_id, _name, _party, _photo);
+        candidates.push(newCandidate);
+        emit CandidateAdded(_id, _name, _party, _photo);
+    }
+
+    // Function to register voter
+    function registerVoter(uint _id, string memory _name, address _voterAddress) public returns (Voter memory) {
+        require(!voters[_voterAddress].isRegistered, "Voter is already registered");
+        Voter memory newVoter = Voter(_id, _name, _voterAddress, true, false);
+        voters[_voterAddress] = newVoter;
+        registeredVoters.push(newVoter);
+        emit VoterRegistered(_voterAddress, _id, _name);
+        return newVoter;
+    }
+
+    // Function to cast vote
+    function castVote(uint _candidateId, address _voterAddress) public returns (Vote memory) {
+        require(voters[_voterAddress].isRegistered, "Voter is not registered");
+        require(!voters[_voterAddress].hasVoted, "Voter has already voted");
+
+        voters[_voterAddress].hasVoted = true;
+        Vote memory newVote = Vote(_candidateId, voters[_voterAddress].id, true);
+        votes[_voterAddress] = newVote;
+        voteCounts[_candidateId]++;
+        castVotes.push(newVote);
+        emit VoteCast(_voterAddress, _candidateId);
+        return newVote;
+    }
+
+    // Function to get the total number of votes for a candidate
+    function getVoteCount(uint _candidateId) public view returns (uint) {
+        return voteCounts[_candidateId];
+    }
+
+    // Function to get the total number of registered voters
+    function getRegisteredVotersCount() public view returns (uint) {
+        return registeredVoters.length;
+    }
+
+    // Function to get the total number of cast votes
+    function getCastVotesCount() public view returns (uint) {
+        return castVotes.length;
+    }
+
+    // Function to get audits
+    function getAudits() public view returns (Voter[] memory, Vote[] memory) {
+        return (registeredVoters, castVotes);
+    }
+
+    // Function to transfer ownership (Owner only)
+    function transferOwnership(address newOwner) public onlyOwner {
+        require(newOwner != address(0), "New owner cannot be the zero address");
+        owner = newOwner;
+    }
+}

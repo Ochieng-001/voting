@@ -1,16 +1,17 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { insertVoterSchema } from '@shared/schema';
-import { useRegisterVoter, useVoterData } from '@/hooks/use-contract';
-import { useWallet } from '@/hooks/use-wallet';
-import { useToast } from '@/hooks/use-toast';
-import { UserPlus, CheckCircle } from 'lucide-react';
-import { z } from 'zod';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertVoterSchema } from "@shared/schema";
+import { useRegisterVoter, useVoterData } from "@/hooks/use-contract";
+import { useElectionSettings } from "@/hooks/use-election-settings";
+import { useWallet } from "@/hooks/use-wallet";
+import { useToast } from "@/hooks/use-toast";
+import { UserPlus, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { z } from "zod";
 
 const registrationFormSchema = insertVoterSchema.omit({ voterAddress: true });
 type RegistrationFormData = z.infer<typeof registrationFormSchema>;
@@ -19,13 +20,14 @@ export function VoterRegistration() {
   const { isConnected, address } = useWallet();
   const { data: voterData } = useVoterData();
   const registerVoterMutation = useRegisterVoter();
+  const { settings: electionSettings } = useElectionSettings();
   const { toast } = useToast();
 
   const form = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationFormSchema),
     defaultValues: {
       id: 0,
-      name: '',
+      name: "",
     },
   });
 
@@ -39,14 +41,26 @@ export function VoterRegistration() {
       return;
     }
 
+    if (!electionSettings.isRegistrationOpen) {
+      toast({
+        title: "Registration Closed",
+        description: "The registration period has ended.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const result = await registerVoterMutation.mutateAsync(data);
-      
+
       toast({
         title: "Registration Successful!",
-        description: `You are now registered to vote. Transaction hash: ${result.txHash.substring(0, 10)}...`,
+        description: `You are now registered to vote. Transaction hash: ${result.txHash.substring(
+          0,
+          10
+        )}...`,
       });
-      
+
       form.reset();
     } catch (error: any) {
       toast({
@@ -57,6 +71,28 @@ export function VoterRegistration() {
     }
   };
 
+  // If registration is closed, show deadline message
+  if (!electionSettings.isRegistrationOpen && !voterData?.isRegistered) {
+    return (
+      <Card className="bg-red-50 border border-red-200">
+        <CardContent className="pt-6">
+          <div className="flex items-center">
+            <AlertCircle className="text-red-600 mr-3 w-6 h-6" />
+            <div>
+              <h4 className="text-sm font-medium text-red-800">
+                Registration Closed
+              </h4>
+              <p className="text-sm text-red-700 mt-1">
+                The registration period has ended. New voter registrations are
+                no longer accepted.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // If voter is already registered, show success message
   if (voterData?.isRegistered) {
     return (
@@ -65,9 +101,12 @@ export function VoterRegistration() {
           <div className="flex items-center">
             <CheckCircle className="text-secondary mr-3 w-6 h-6" />
             <div>
-              <h4 className="text-sm font-medium text-green-800">Registration Successful!</h4>
+              <h4 className="text-sm font-medium text-green-800">
+                Registration Successful!
+              </h4>
               <p className="text-sm text-green-700 mt-1">
-                You are registered as: <strong>{voterData.name}</strong> (ID: {voterData.id})
+                You are registered as: <strong>{voterData.name}</strong> (ID:{" "}
+                {voterData.id})
               </p>
             </div>
           </div>
@@ -84,49 +123,70 @@ export function VoterRegistration() {
             <UserPlus className="text-primary w-6 h-6" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold text-gray-900">Voter Registration</CardTitle>
-            <p className="text-gray-600">Register to participate in the election</p>
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              Voter Registration
+            </CardTitle>
+            <p className="text-gray-600">
+              Register to participate in the election
+            </p>
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-md">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-6 max-w-md"
+        >
           <div>
-            <Label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+            <Label
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Full Name
             </Label>
             <Input
               id="name"
-              {...form.register('name')}
+              {...form.register("name")}
               placeholder="Enter your full name"
               className="w-full"
             />
             {form.formState.errors.name && (
-              <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>
+              <p className="text-sm text-destructive mt-1">
+                {form.formState.errors.name.message}
+              </p>
             )}
           </div>
-          
+
           <div>
-            <Label htmlFor="id" className="block text-sm font-medium text-gray-700 mb-2">
+            <Label
+              htmlFor="id"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Voter ID
             </Label>
             <Input
               id="id"
               type="number"
-              {...form.register('id', { valueAsNumber: true })}
+              {...form.register("id", { valueAsNumber: true })}
               placeholder="Enter your voter ID"
               className="w-full"
             />
             {form.formState.errors.id && (
-              <p className="text-sm text-destructive mt-1">{form.formState.errors.id.message}</p>
+              <p className="text-sm text-destructive mt-1">
+                {form.formState.errors.id.message}
+              </p>
             )}
           </div>
-          
-          <Button 
-            type="submit" 
-            disabled={!isConnected || registerVoterMutation.isPending}
-            className="w-full bg-primary hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
+
+          <Button
+            type="submit"
+            disabled={
+              !isConnected ||
+              registerVoterMutation.isPending ||
+              !electionSettings.isRegistrationOpen
+            }
+            className="w-full bg-primary hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
           >
             {registerVoterMutation.isPending ? (
               <>

@@ -1,14 +1,12 @@
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { WalletConnection, WalletBanner } from "@/components/WalletConnection";
-import { VoterRegistration } from "@/components/VoterRegistration";
-import { VotingInterface } from "@/components/VotingInterface";
-import { VoteReceipt } from "@/components/VoteReceipt";
-import { ElectionResults } from "@/components/ElectionResults";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { useElectionStats, useIsOwner } from "@/hooks/use-contract";
+import { useElectionSettings } from "@/hooks/use-election-settings";
 import { useWallet } from "@/hooks/use-wallet";
+import { Link } from "wouter";
 import {
   Vote,
   Users,
@@ -17,16 +15,20 @@ import {
   Shield,
   User,
   UserCog,
+  UserPlus,
+  Receipt,
+  ArrowRight,
 } from "lucide-react";
 
 type UserRole = "voter" | "admin";
 
-export default function VotingSystem() {
+export default function HomePage() {
   const [userRole, setUserRole] = useState<UserRole>("voter");
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const { isConnected } = useWallet();
   const { data: stats } = useElectionStats();
   const { data: isOwner = false } = useIsOwner();
+  const { settings: electionSettings } = useElectionSettings();
 
   // Reset to voter mode if user is not owner
   React.useEffect(() => {
@@ -43,32 +45,40 @@ export default function VotingSystem() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-primary">
-                  <Vote className="inline mr-2 w-6 h-6" />
-                  DecentralVote
-                </h1>
+                <Link href="/">
+                  <h1 className="text-2xl font-bold text-primary cursor-pointer">
+                    <Vote className="inline mr-2 w-6 h-6" />
+                    DecentralVote
+                  </h1>
+                </Link>
               </div>
               {userRole === "voter" && (
                 <div className="hidden md:block">
                   <div className="ml-10 flex items-baseline space-x-4">
-                    <a
-                      href="#register"
+                    <Link
+                      href="/register"
                       className="text-gray-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
                     >
                       Register
-                    </a>
-                    <a
-                      href="#vote"
+                    </Link>
+                    <Link
+                      href="/vote"
                       className="text-gray-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
                     >
                       Vote
-                    </a>
-                    <a
-                      href="#results"
+                    </Link>
+                    <Link
+                      href="/results"
                       className="text-gray-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
                     >
                       Results
-                    </a>
+                    </Link>
+                    <Link
+                      href="/receipt"
+                      className="text-gray-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    >
+                      Receipt
+                    </Link>
                   </div>
                 </div>
               )}
@@ -148,7 +158,7 @@ export default function VotingSystem() {
               </div>
             </div>
 
-            {/* Voting Status Cards */}
+            {/* Election Stats */}
             {isConnected && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
@@ -197,8 +207,20 @@ export default function VotingSystem() {
                         <p className="text-sm font-medium text-gray-600">
                           Election Status
                         </p>
-                        <p className="text-lg font-bold text-gray-900">
-                          Active
+                        <p
+                          className={`text-lg font-bold ${
+                            electionSettings.isVotingOpen
+                              ? "text-green-600"
+                              : electionSettings.isRegistrationOpen
+                              ? "text-blue-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {electionSettings.isVotingOpen
+                            ? "Voting Active"
+                            : electionSettings.isRegistrationOpen
+                            ? "Registration Open"
+                            : "Election Closed"}
                         </p>
                       </div>
                     </div>
@@ -207,20 +229,84 @@ export default function VotingSystem() {
               </div>
             )}
 
-            {/* Voter Sections */}
-            <section id="register">
-              <VoterRegistration />
-            </section>
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Link href="/register">
+                <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary/20">
+                  <CardContent className="p-6 text-center">
+                    <div className="p-3 bg-blue-100 rounded-lg mx-auto w-fit mb-4">
+                      <UserPlus className="text-primary w-6 h-6" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      Register to Vote
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Complete your voter registration
+                    </p>
+                    <div className="flex items-center justify-center text-primary text-sm font-medium">
+                      Get Started <ArrowRight className="ml-2 w-4 h-4" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-            <VoteReceipt />
+              <Link href="/vote">
+                <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-secondary/20">
+                  <CardContent className="p-6 text-center">
+                    <div className="p-3 bg-green-100 rounded-lg mx-auto w-fit mb-4">
+                      <Vote className="text-secondary w-6 h-6" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      Cast Your Vote
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Choose your preferred candidate
+                    </p>
+                    <div className="flex items-center justify-center text-secondary text-sm font-medium">
+                      Vote Now <ArrowRight className="ml-2 w-4 h-4" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-            <section id="vote">
-              <VotingInterface />
-            </section>
+              <Link href="/results">
+                <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-purple-500/20">
+                  <CardContent className="p-6 text-center">
+                    <div className="p-3 bg-purple-100 rounded-lg mx-auto w-fit mb-4">
+                      <BarChart3 className="text-purple-600 w-6 h-6" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      Election Results
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      View live election results
+                    </p>
+                    <div className="flex items-center justify-center text-purple-600 text-sm font-medium">
+                      View Results <ArrowRight className="ml-2 w-4 h-4" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-            <section id="results">
-              <ElectionResults />
-            </section>
+              <Link href="/receipt">
+                <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-accent/20">
+                  <CardContent className="p-6 text-center">
+                    <div className="p-3 bg-orange-100 rounded-lg mx-auto w-fit mb-4">
+                      <Receipt className="text-accent w-6 h-6" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      Vote Receipt
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      View your voting confirmation
+                    </p>
+                    <div className="flex items-center justify-center text-accent text-sm font-medium">
+                      View Receipt <ArrowRight className="ml-2 w-4 h-4" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           </div>
         ) : (
           <AdminDashboard />

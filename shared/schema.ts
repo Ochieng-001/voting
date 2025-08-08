@@ -54,6 +54,23 @@ export const electionStatsSchema = z.object({
   votingStatus: z.string(),
 });
 
+export const electionSettingsSchema = z.object({
+  registrationDeadline: z.string().nullable(),
+  votingStartTime: z.string().nullable(),
+  votingEndTime: z.string().nullable(),
+  isRegistrationOpen: z.boolean(),
+  isVotingOpen: z.boolean(),
+  canUpdateSettings: z.boolean(),
+});
+
+export const countdownSchema = z.object({
+  days: z.number(),
+  hours: z.number(),
+  minutes: z.number(),
+  seconds: z.number(),
+  isExpired: z.boolean(),
+});
+
 export const candidateResultSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -71,3 +88,5 @@ export type Vote = z.infer<typeof voteSchema>;
 export type VoteReceipt = z.infer<typeof voteReceiptSchema>;
 export type ElectionStats = z.infer<typeof electionStatsSchema>;
 export type CandidateResult = z.infer<typeof candidateResultSchema>;
+export type ElectionSettings = z.infer<typeof electionSettingsSchema>;
+export type Countdown = z.infer<typeof countdownSchema>;

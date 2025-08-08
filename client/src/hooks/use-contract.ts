@@ -1,12 +1,16 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useWallet } from '@/hooks/use-wallet';
-import { type Candidate, type Voter, type CandidateResult } from '@shared/schema';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useWallet } from "@/hooks/use-wallet";
+import {
+  type Candidate,
+  type Voter,
+  type CandidateResult,
+} from "@shared/schema";
 
 export function useVoterData() {
   const { contract, address } = useWallet();
-  
+
   return useQuery({
-    queryKey: ['voter', address],
+    queryKey: ["voter", address],
     queryFn: async () => {
       if (!contract || !address) return null;
       return await contract.getVoter(address);
@@ -17,9 +21,9 @@ export function useVoterData() {
 
 export function useCandidates() {
   const { contract } = useWallet();
-  
+
   return useQuery({
-    queryKey: ['candidates'],
+    queryKey: ["candidates"],
     queryFn: async () => {
       if (!contract) return [];
       return await contract.getAllCandidates();
@@ -30,18 +34,19 @@ export function useCandidates() {
 
 export function useElectionStats() {
   const { contract } = useWallet();
-  
+
   return useQuery({
-    queryKey: ['election-stats'],
+    queryKey: ["election-stats"],
     queryFn: async () => {
-      if (!contract) return { totalVoters: 0, totalVotes: 0, totalCandidates: 0 };
-      
+      if (!contract)
+        return { totalVoters: 0, totalVotes: 0, totalCandidates: 0 };
+
       const [totalVoters, totalVotes, candidates] = await Promise.all([
         contract.getTotalVoters(),
         contract.getTotalVotes(),
         contract.getAllCandidates(),
       ]);
-      
+
       return {
         totalVoters,
         totalVotes,
@@ -55,20 +60,20 @@ export function useElectionStats() {
 
 export function useElectionResults() {
   const { contract } = useWallet();
-  
+
   return useQuery({
-    queryKey: ['election-results'],
+    queryKey: ["election-results"],
     queryFn: async (): Promise<CandidateResult[]> => {
       if (!contract) return [];
-      
+
       const candidates = await contract.getAllCandidates();
       const totalVotes = await contract.getTotalVotes();
-      
+
       const results = await Promise.all(
         candidates.map(async (candidate) => {
           const votes = await contract.getVoteCount(candidate.id);
           const percentage = totalVotes > 0 ? (votes / totalVotes) * 100 : 0;
-          
+
           return {
             ...candidate,
             votes,
@@ -76,7 +81,7 @@ export function useElectionResults() {
           };
         })
       );
-      
+
       // Sort by vote count (highest first)
       return results.sort((a, b) => b.votes - a.votes);
     },
@@ -87,9 +92,9 @@ export function useElectionResults() {
 
 export function useAuditData() {
   const { contract } = useWallet();
-  
+
   return useQuery({
-    queryKey: ['audit-data'],
+    queryKey: ["audit-data"],
     queryFn: async () => {
       if (!contract) return { voters: [], votes: [] };
       return await contract.getAudits();
@@ -101,33 +106,50 @@ export function useAuditData() {
 export function useRegisterVoter() {
   const { contract, address } = useWallet();
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, name }: { id: number; name: string }) => {
-      if (!contract || !address) throw new Error('Wallet not connected');
+      if (!contract || !address) throw new Error("Wallet not connected");
       return await contract.registerVoter(id, name, address);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['voter'] });
-      queryClient.invalidateQueries({ queryKey: ['election-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['audit-data'] });
+      queryClient.invalidateQueries({ queryKey: ["voter"] });
+      queryClient.invalidateQueries({ queryKey: ["election-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["audit-data"] });
     },
   });
 }
 
 export function useAddCandidate() {
-  const { contract } = useWallet();
+  const { contract, address } = useWallet();
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ id, name, party, photo }: { id: number; name: string; party: string; photo: string }) => {
-      if (!contract) throw new Error('Wallet not connected');
+    mutationFn: async ({
+      id,
+      name,
+      party,
+      photo,
+    }: {
+      id: number;
+      name: string;
+      party: string;
+      photo: string;
+    }) => {
+      if (!contract || !address) throw new Error("Wallet not connected");
+
+      // Check if user is owner before allowing candidate addition
+      const isOwner = await contract.isOwner(address);
+      if (!isOwner) {
+        throw new Error("Only the contract owner can add candidates");
+      }
+
       return await contract.addCandidate(id, name, party, photo);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['candidates'] });
-      queryClient.invalidateQueries({ queryKey: ['election-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['election-results'] });
+      queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["election-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["election-results"] });
     },
   });
 }
@@ -135,17 +157,30 @@ export function useAddCandidate() {
 export function useCastVote() {
   const { contract, address } = useWallet();
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ candidateId }: { candidateId: number }) => {
-      if (!contract || !address) throw new Error('Wallet not connected');
+      if (!contract || !address) throw new Error("Wallet not connected");
       return await contract.castVote(candidateId, address);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['voter'] });
-      queryClient.invalidateQueries({ queryKey: ['election-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['election-results'] });
-      queryClient.invalidateQueries({ queryKey: ['audit-data'] });
+      queryClient.invalidateQueries({ queryKey: ["voter"] });
+      queryClient.invalidateQueries({ queryKey: ["election-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["election-results"] });
+      queryClient.invalidateQueries({ queryKey: ["audit-data"] });
     },
+  });
+}
+
+export function useIsOwner() {
+  const { contract, address } = useWallet();
+
+  return useQuery({
+    queryKey: ["is-owner", address],
+    queryFn: async () => {
+      if (!contract || !address) return false;
+      return await contract.isOwner(address);
+    },
+    enabled: !!contract && !!address,
   });
 }
